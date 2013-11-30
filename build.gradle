@@ -1,0 +1,31 @@
+apply plugin: 'groovy'
+apply plugin: 'eclipse'
+
+buildscript {
+    repositories {
+		mavenCentral()
+	}
+}
+
+repositories {
+    mavenCentral()
+}
+
+sourceCompatibility = 1.6
+
+dependencies {
+    compile 'org.ccil.cowan.tagsoup:tagsoup:1.2.1'
+    compile 'org.codehaus.groovy:groovy-all:2.2.1'
+	compile 'com.google.gdata:core:1.47.1'
+	compile 'commons-httpclient:commons-httpclient:3.1'
+	compile 'log4j:log4j:1.2.14'
+	compile 'joda-time:joda-time:2.3'
+	compile 'com.github.spullara.mustache.java:compiler:0.8.13'
+}
+
+apply plugin: 'application'
+mainClassName = 'org.aspyker.tools.ReInvent2013Converter'
+
+run {
+    args = ['src/main/resources/ARC.html']
+}
