@@ -50,6 +50,28 @@ def Slideshow[] getAmazonSlides(Logger log, ConfigObject config) {
 	return shows
 }
 
+String getYouTubeUrl(String sessNum, String queryString, YouTubeQuery query, YouTubeService service, DateTime newerThanDate) {
+	query.setFullTextQuery(queryString)
+	VideoFeed videoFeed = service.query(query, VideoFeed.class)
+	
+	def youtubeUrl = null
+	for (int ii = 0; ii < videoFeed.entries.size(); ii++) {
+		VideoEntry video = videoFeed.entries[ii]
+		// TODO:  Ensure that common attributes of publisher, etc are correct
+		String videoTitle = video.title.plainText
+		if (!videoTitle.contains(sessNum)) {
+			continue
+		}
+		videoId = video.id.substring(video.id.lastIndexOf(':') + 1)
+		DateTime videoDateTime = new DateTime(video.published.value)
+		if (videoDateTime.isAfter(newerThanDate)) {
+			youtubeUrl = 'http://www.youtube.com/watch?v=' + videoId
+			break
+		}
+	}
+	youtubeUrl
+}
+
 SessionInfo[] getSessionInfos(Logger log, String filename, Slideshow[] slideShares, ConfigObject config, DateTime newerThanDate) {
 	def infos = []
 	XmlSlurper slurp = new XmlSlurper(new Parser())
@@ -60,6 +82,7 @@ SessionInfo[] getSessionInfos(Logger log, String filename, Slideshow[] slideShar
 	YouTubeService service = new YouTubeService(config.converter.youtube.client.id)
 	YouTubeQuery query = new YouTubeQuery(new URL("http://gdata.youtube.com/feeds/api/videos"))
 	query.setOrderBy(YouTubeQuery.OrderBy.RELEVANCE)
+	query.setSafeSearch(YouTubeQuery.SafeSearch.NONE)
 	
 	sessions.each { session ->
 		def sessInfo = new SessionInfo()
@@ -76,22 +99,15 @@ SessionInfo[] getSessionInfos(Logger log, String filename, Slideshow[] slideShar
 		sessInfo.speakers = spkr
 		log.debug 'abstract: ' + abst
 		sessInfo.abstract1 = abst
-		query.setFullTextQuery(snum + ' re:Invent 2013')
-		query.setSafeSearch(YouTubeQuery.SafeSearch.NONE)
-		VideoFeed videoFeed = service.query(query, VideoFeed.class)
 		
-		def youtubeUrl = null
-		for (int ii = 0; ii < videoFeed.entries.size(); ii++) {
-			VideoEntry video = videoFeed.entries[ii]
-			// TODO:  Ensure that common attributes of publisher, etc are correct
-			videoTitle = video.title.plainText
-			videoId = video.id.substring(video.id.lastIndexOf(':') + 1)
-			DateTime videoDateTime = new DateTime(video.published.value)
-			if (videoDateTime.isAfter(newerThanDate)) {
-				youtubeUrl = 'http://www.youtube.com/watch?v=' + videoId
-				break
-			}
+		String queryString = snum + ' re:Invent 2013'
+		String youtubeUrl = getYouTubeUrl(snum, queryString, query, service, newerThanDate)
+		if (!youtubeUrl) {
+			// repeat session instead
+			queryString = snum + 'R re:Invent 2013'
+			youtubeUrl = getYouTubeUrl(snum, queryString, query, service, newerThanDate)
 		}
+		
 		log.debug 'youtube url: ' + youtubeUrl
 		sessInfo.youtubeUrl = youtubeUrl
 		
